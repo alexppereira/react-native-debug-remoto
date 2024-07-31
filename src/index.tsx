@@ -1,4 +1,12 @@
-import { Dimensions, NativeModules, PixelRatio, Platform } from 'react-native';
+import React from 'react';
+import {
+  Animated,
+  Dimensions,
+  NativeModules,
+  PixelRatio,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import io from 'socket.io-client';
 
 const LINKING_ERROR =
@@ -125,3 +133,103 @@ export function inicializarDebugControleRemoto(
 
   return resetarEstados;
 }
+
+interface ModalProps {
+  visible: boolean;
+  children: React.ReactNode;
+  transparent?: boolean;
+  animationType?: 'none' | 'slide' | 'fade';
+  onClose?: () => void;
+  onConfirm?: () => void;
+  title?: string;
+  message?: string;
+}
+
+const height = Dimensions.get('window').height;
+export const Modal: React.FC<ModalProps> = ({ visible, children }) => {
+  const [modalVisible, setModalVisible] = React.useState(visible);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(height)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: height,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setModalVisible(false));
+    }
+  }, [fadeAnim, slideAnim, visible]);
+
+  if (!modalVisible) return null;
+
+  return (
+    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          { transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        {children}
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'white',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    padding: 20,
+    position: 'absolute',
+    bottom: 0,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+});

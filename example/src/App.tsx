@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
-import { inicializarDebugControleRemoto } from 'react-native-debug-remoto';
+import {
+  inicializarDebugControleRemoto,
+  Modal,
+} from 'react-native-debug-remoto';
 
 const TextInputExample = () => {
   const [text, setText] = useState('');
@@ -23,16 +26,18 @@ const TextInputExample = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Digite algo remoto, acesse http://alexpereira.net.br:3000"
-        value={text}
-        onChangeText={handleTextChange}
-      />
-      <Button title="ENVIAR" onPress={handleButtonPress} />
-      <Text style={styles.text}>Texto inserido: {text}</Text>
-    </View>
+    <Modal visible={true} transparent animationType="slide">
+      <View style={styles.container} accessibilityLabel="modal-view">
+        <TextInput
+          style={styles.input}
+          placeholder="Digite algo remoto, acesse http://alexpereira.net.br:3000"
+          value={text}
+          onChangeText={handleTextChange}
+        />
+        <Button title="ENVIAR" onPress={handleButtonPress} />
+        <Text style={styles.text}>Texto inserido: {text}</Text>
+      </View>
+    </Modal>
   );
 };
 
