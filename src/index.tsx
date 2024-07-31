@@ -204,6 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
     alignItems: 'center',
+    zIndex: 1000,
   },
   modalContainer: {
     width: '100%',
@@ -214,6 +215,7 @@ const styles = StyleSheet.create({
     padding: 20,
     position: 'absolute',
     bottom: 0,
+    zIndex: 1000,
   },
   content: {
     flex: 1,
