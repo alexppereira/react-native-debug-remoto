@@ -1,6 +1,7 @@
 # react-native-debug-remoto
 
-Permite debug e controle remoto da aplicação
+`react-native-debug-remoto` é uma biblioteca para React Native que fornece funcionalidades de depuração e controle remoto. Com esta biblioteca, você pode adicionar funcionalidades avançadas de controle remoto e depuração em seus aplicativos React Native.
+
 
 ## Installation
 
