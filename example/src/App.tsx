@@ -1,30 +1,58 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { multiply } from 'react-native-debug-remoto';
+import { useEffect, useState } from 'react';
+import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
+import { inicializarDebugControleRemoto } from 'react-native-debug-remoto';
 
-export default function App() {
-  const [result, setResult] = useState<number | undefined>();
+const TextInputExample = () => {
+  const [text, setText] = useState('');
 
   useEffect(() => {
-    multiply(3, 7).then(setResult);
+    const resetarEstados = inicializarDebugControleRemoto();
+
+    return () => {
+      resetarEstados();
+    };
   }, []);
+
+  const handleTextChange = (inputText: string) => {
+    setText(inputText);
+  };
+
+  const handleButtonPress = () => {
+    console.log('Valor de entrada de texto: ', text);
+    setText('');
+  };
 
   return (
     <View style={styles.container}>
-      <Text>Result: {result}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Digite algo remoto, acesse http://alexpereira.net.br:3000"
+        value={text}
+        onChangeText={handleTextChange}
+      />
+      <Button title="ENVIAR" onPress={handleButtonPress} />
+      <Text style={styles.text}>Texto inserido: {text}</Text>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    padding: 16,
   },
-  box: {
-    width: 60,
-    height: 60,
-    marginVertical: 20,
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  text: {
+    marginTop: 16,
+    fontSize: 16,
   },
 });
+
+export default TextInputExample;
