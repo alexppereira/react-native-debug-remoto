@@ -5,18 +5,36 @@ Permite debug e controle remoto da aplicação
 ## Installation
 
 ```sh
-npm install react-native-debug-remoto
+yarn add git+https://github.com/alexppereira/react-native-debug-remoto.git
 ```
 
 ## Usage
 
 
 ```js
-import { multiply } from 'react-native-debug-remoto';
+import React, { useEffect } from 'react';
+import { View, Text } from 'react-native';
+import { inicializarDebugControleRemoto } from 'react-native-debug-remoto';
 
-// ...
+const App = () => {
+  useEffect(() => {
+    // Inicializa a biblioteca
+    const resetarEstados = inicializarDebugControleRemoto();
 
-const result = await multiply(3, 7);
+    // Limpeza na desmontagem do componente
+    return () => {
+      resetarEstados();
+    };
+  }, []);
+
+  return (
+    <View>
+      <Text>Bem-vindo ao React Native Debug Remoto!</Text>
+    </View>
+  );
+};
+
+export default App;
 ```
 
 
