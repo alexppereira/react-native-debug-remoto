@@ -157,12 +157,12 @@ export const Modal: React.FC<ModalProps> = ({ visible, children }) => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
@@ -170,12 +170,12 @@ export const Modal: React.FC<ModalProps> = ({ visible, children }) => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: height,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start(() => setModalVisible(false));
