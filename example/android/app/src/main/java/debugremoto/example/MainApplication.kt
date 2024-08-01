@@ -10,6 +10,8 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
+// import android.preference.PreferenceManager
+// import android.content.SharedPreferences
 
 class MainApplication : Application(), ReactApplication {
 
@@ -34,6 +36,11 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    // val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+    // val editor: SharedPreferences.Editor = prefs.edit()
+    // editor.putString("debug_http_host", "whole-planes-shake.loca.lt")
+    // editor.apply()
+
     SoLoader.init(this, false)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
