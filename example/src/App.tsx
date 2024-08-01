@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
+import { View, TextInput, Button, Text, StyleSheet, Modal } from 'react-native';
 import {
   inicializarDebugControleRemoto,
-  Modal,
+  onRefParaCaptura,
 } from 'react-native-debug-remoto';
 
 const TextInputExample = () => {
@@ -27,7 +27,11 @@ const TextInputExample = () => {
 
   return (
     <Modal visible={true} transparent animationType="slide">
-      <View style={styles.container} accessibilityLabel="modal-view">
+      <View
+        ref={onRefParaCaptura}
+        style={styles.container}
+        accessibilityLabel="modal-view"
+      >
         <TextInput
           style={styles.input}
           placeholder="Digite algo remoto, acesse http://alexpereira.net.br:3000"

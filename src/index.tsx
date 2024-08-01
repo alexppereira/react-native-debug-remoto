@@ -1,30 +1,145 @@
-import React from 'react';
+import React, { Component } from 'react';
 import {
   Animated,
   Dimensions,
-  NativeModules,
+  findNodeHandle,
   PixelRatio,
   Platform,
   StyleSheet,
+  View,
 } from 'react-native';
 import io from 'socket.io-client';
+import RNViewShot from './specs/NativeRNViewShot';
 
-const LINKING_ERROR =
-  `The package 'react-native-debug-remoto' doesn't seem to be linked. Make sure: \n\n` +
-  Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
-  '- You rebuilt the app after installing the package\n' +
-  '- You are not using Expo Go\n';
-
-const DebugRemoto = NativeModules.DebugRemoto
-  ? NativeModules.DebugRemoto
-  : new Proxy(
-      {},
-      {
-        get() {
-          throw new Error(LINKING_ERROR);
-        },
-      }
+export function ensureModuleIsLoaded() {
+  if (!RNViewShot) {
+    throw new Error(
+      'react-native-view-shot: NativeModules.RNViewShot is undefined. Make sure the library is linked on the native side.'
     );
+  }
+}
+
+const defaultOptions = {
+  format: 'png',
+  quality: 1,
+  result: 'tmpfile',
+  snapshotContentContainer: false,
+  handleGLSurfaceViewOnAndroid: false,
+};
+
+type Options = {
+  width?: number;
+  height?: number;
+  format: 'png' | 'jpg' | 'webm' | 'raw';
+  quality: number;
+  result: 'tmpfile' | 'base64' | 'data-uri' | 'zip-base64';
+  snapshotContentContainer: boolean;
+  handleGLSurfaceViewOnAndroid: boolean;
+};
+
+const acceptedFormats = ['png', 'jpg'].concat(
+  Platform.OS === 'android' ? ['webm', 'raw'] : []
+);
+
+const acceptedResults = ['tmpfile', 'base64', 'data-uri'].concat(
+  Platform.OS === 'android' ? ['zip-base64'] : []
+);
+
+function validateOptions(input?: Partial<Options>): {
+  options: Options;
+  errors: Array<string>;
+} {
+  const options = {
+    ...defaultOptions,
+    ...input,
+  };
+  const errors = [];
+  if (
+    'width' in options &&
+    (typeof options.width !== 'number' || options.width <= 0)
+  ) {
+    errors.push('option width should be a positive number');
+    delete options.width;
+  }
+  if (
+    'height' in options &&
+    (typeof options.height !== 'number' || options.height <= 0)
+  ) {
+    errors.push('option height should be a positive number');
+    delete options.height;
+  }
+  if (
+    typeof options.quality !== 'number' ||
+    options.quality < 0 ||
+    options.quality > 1
+  ) {
+    errors.push('option quality should be a number between 0.0 and 1.0');
+    options.quality = defaultOptions.quality;
+  }
+  if (typeof options.snapshotContentContainer !== 'boolean') {
+    errors.push('option snapshotContentContainer should be a boolean');
+  }
+  if (typeof options.handleGLSurfaceViewOnAndroid !== 'boolean') {
+    errors.push('option handleGLSurfaceViewOnAndroid should be a boolean');
+  }
+  if (acceptedFormats.indexOf(options.format) === -1) {
+    options.format = defaultOptions.format as Options['format'];
+    errors.push(
+      "option format '" +
+        options.format +
+        "' is not in valid formats: " +
+        acceptedFormats.join(' | ')
+    );
+  }
+  if (acceptedResults.indexOf(options.result) === -1) {
+    options.result = defaultOptions.result;
+    errors.push(
+      "option result '" +
+        options.result +
+        "' is not in valid formats: " +
+        acceptedResults.join(' | ')
+    );
+  }
+
+  return { options: options as Options, errors };
+}
+
+export function captureRef<T extends View>(
+  view: number | View | React.RefObject<T>,
+  optionsObject?: Object
+): Promise<string> {
+  ensureModuleIsLoaded();
+  if (
+    view &&
+    typeof view === 'object' &&
+    'current' in view &&
+    // $FlowFixMe view is a ref
+    view.current
+  ) {
+    // $FlowFixMe view is a ref
+    view = view.current;
+    if (!view) {
+      return Promise.reject(new Error('ref.current is null'));
+    }
+  }
+  if (typeof view !== 'number') {
+    const node = findNodeHandle(view as Component);
+    if (!node) {
+      return Promise.reject(
+        new Error('findNodeHandle failed to resolve view=' + String(view))
+      );
+    }
+    view = node;
+  }
+  const { options, errors } = validateOptions(optionsObject);
+  if (__DEV__ && errors.length > 0) {
+    console.warn(
+      'react-native-view-shot: bad options:\n' +
+        errors.map((e) => `- ${e}`).join('\n')
+    );
+  }
+  return RNViewShot.captureRef(view, options);
+}
 
 const porcentagemParaPixels = (percentage: number, totalPixels: number) => {
   return (percentage / 100) * totalPixels;
@@ -45,7 +160,7 @@ export const simularClickPassandoPorcentagem = (
   const y = porcentagemParaPixels(porcentagemY, SCREEN_HEIGHT);
 
   return new Promise((resolve, reject) => {
-    DebugRemoto.simulateClick(x, y)
+    RNViewShot.simulateClick(x, y)
       .then((result: boolean) => resolve(result))
       .catch((error: any) => reject(error));
   });
@@ -53,25 +168,32 @@ export const simularClickPassandoPorcentagem = (
 
 export const simularDigitarTexto = (texto: string): Promise<boolean> => {
   return new Promise((resolve, reject) => {
-    DebugRemoto.insertText(texto)
+    RNViewShot.insertText(texto)
       .then((result: boolean) => resolve(result))
       .catch((error: any) => reject(error));
   });
 };
 
-async function enviarImagemParaRemoto(servidor: string): Promise<void> {
-  if (!DebugRemoto?.takeScreenshot) {
-    console.error(
-      'DebugRemoto.takeScreenshot não está definido. Verifique a ligação nativa.'
+export function captureScreen(optionsObject?: Options): Promise<string> {
+  ensureModuleIsLoaded();
+  const { options, errors } = validateOptions(optionsObject);
+  if (__DEV__ && errors.length > 0) {
+    console.warn(
+      'react-native-view-shot: bad options:\n' +
+        errors.map((e) => `- ${e}`).join('\n')
     );
-    return;
   }
+  return RNViewShot.captureScreen(options);
+}
 
-  const localUri = await DebugRemoto.takeScreenshot();
+async function enviarImagemParaRemoto(servidor: string): Promise<void> {
+  const localUri = refSnapshot
+    ? await captureRef(refSnapshot)
+    : await RNViewShot.takeScreenshot();
 
   const formData = new FormData();
   formData.append('image', {
-    uri: `file://${localUri}`,
+    uri: `${localUri}`,
     type: 'image/png',
     name: 'captured_screen.png',
   });
@@ -91,7 +213,15 @@ async function enviarImagemParaRemoto(servidor: string): Promise<void> {
     console.error('Erro ao enviar imagem:', error);
   }
 
-  await DebugRemoto.deleteImage(localUri);
+  await RNViewShot.deleteImage(localUri.replace('file://', ''));
+}
+
+let refSnapshot: View | null;
+
+export function onRefParaCaptura(ref: View | null): View | null {
+  refSnapshot = ref;
+
+  return ref;
 }
 
 export function inicializarDebugControleRemoto(
