@@ -224,10 +224,57 @@ export function onRefParaCaptura(ref: View | null): View | null {
   return ref;
 }
 
+export async function sendLogToServer(
+  level: string,
+  args: string[]
+): Promise<void> {
+  try {
+    await fetch('http://192.168.1.9:3000/logs', {
+      // Use o IP correto se necessário
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        level,
+        message: args.join(' '),
+        timestamp: new Date().toISOString(),
+      }),
+    });
+  } catch (error) {
+    console.error('Failed to send log to server', error);
+  }
+}
+
 export function inicializarDebugControleRemoto(
   urlDebug: string = 'http://alexpereira.net.br:3000',
   intervaloDeAtualizacao: number = 1000
 ): () => void {
+  const originalConsoleLog = console.log;
+  const originalConsoleInfo = console.info;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+
+  console.log = (...args) => {
+    sendLogToServer('log', args);
+    originalConsoleLog(...args);
+  };
+
+  console.info = (...args) => {
+    sendLogToServer('info', args);
+    originalConsoleInfo(...args);
+  };
+
+  console.warn = (...args) => {
+    sendLogToServer('warn', args);
+    originalConsoleWarn(...args);
+  };
+
+  console.error = (...args) => {
+    sendLogToServer('error', args);
+    originalConsoleError(...args);
+  };
+
   const socket = io(urlDebug);
 
   socket.on('connect', () => {

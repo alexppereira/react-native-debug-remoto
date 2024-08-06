@@ -21,7 +21,7 @@ const TextInputExample = () => {
   };
 
   const handleButtonPress = () => {
-    console.log('Valor de entrada de texto: ', text);
+    console.log('Valor de entrada de texto: ', text.test.teste);
     setText('');
   };
 
