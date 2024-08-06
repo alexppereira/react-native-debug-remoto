@@ -1,6 +1,6 @@
 {
   "name": "react-native-debug-remoto",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Permite debug e controle remoto da aplicação",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
