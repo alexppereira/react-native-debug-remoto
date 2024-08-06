@@ -184,8 +184,7 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
     }
 
     @ReactMethod
-    public void captureRef(double tagFromJs, ReadableMap options, Promise promise) {
-        int tag = (int) tagFromJs;
+    public void captureRef(int tag, ReadableMap options, Promise promise) {
         final ReactApplicationContext context = getReactApplicationContext();
         final DisplayMetrics dm = context.getResources().getDisplayMetrics();
 
@@ -214,18 +213,12 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
             }
 
             final Activity activity = getCurrentActivity();
-            ViewShot uiBlock = new ViewShot(
+            final UIManagerModule uiManager = this.reactContext.getNativeModule(UIManagerModule.class);
+
+            uiManager.addUIBlock(new ViewShot(
                     tag, extension, imageFormat, quality,
                     scaleWidth, scaleHeight, outputFile, resultStreamFormat,
-                    snapshotContentContainer, reactContext, activity, handleGLSurfaceView, promise, executor);
-
-            if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-                UIManager uiManager = UIManagerHelper.getUIManager(context, UIManagerType.FABRIC);
-                ((FabricUIManager) uiManager).addUIBlock(uiBlock);
-            } else {
-                final UIManagerModule uiManager = this.reactContext.getNativeModule(UIManagerModule.class);
-                uiManager.addUIBlock(uiBlock);
-            }
+                    snapshotContentContainer, reactContext, activity, handleGLSurfaceView, promise, executor));
         } catch (final Throwable ex) {
             Log.e(RNVIEW_SHOT, "Failed to snapshot view tag " + tag, ex);
             promise.reject(ViewShot.ERROR_UNABLE_TO_SNAPSHOT, "Failed to snapshot view tag " + tag);
@@ -318,5 +311,4 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
         }
         return File.createTempFile(TEMP_FILE_PREFIX, suffix, cacheDir);
     }
-
 }

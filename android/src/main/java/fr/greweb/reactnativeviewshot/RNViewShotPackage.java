@@ -1,44 +1,30 @@
 
 package fr.greweb.reactnativeviewshot;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-import com.facebook.react.TurboReactPackage;
+import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.module.model.ReactModuleInfo;
-import com.facebook.react.module.model.ReactModuleInfoProvider;
+import com.facebook.react.uimanager.ViewManager;
+import com.facebook.react.bridge.JavaScriptModule;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class RNViewShotPackage extends TurboReactPackage {
-  @Nullable
+public class RNViewShotPackage implements ReactPackage {
   @Override
-  public NativeModule getModule(@NonNull String name, @NonNull ReactApplicationContext reactApplicationContext) {
-    if (name.equals(RNViewShotModule.RNVIEW_SHOT)) {
-      return new RNViewShotModule(reactApplicationContext);
-    } else {
-      return null;
-    }
+  public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
+    return Arrays.<NativeModule>asList(new RNViewShotModule(reactContext));
+  }
+
+  // Deprecated RN 0.47
+  // @Override
+  public List<Class<? extends JavaScriptModule>> createJSModules() {
+    return Collections.emptyList();
   }
 
   @Override
-  public ReactModuleInfoProvider getReactModuleInfoProvider() {
-    return () -> {
-      final Map<String, ReactModuleInfo> moduleInfos = new HashMap<>();
-      moduleInfos.put(
-              RNViewShotModule.RNVIEW_SHOT,
-              new ReactModuleInfo(
-                      RNViewShotModule.RNVIEW_SHOT,
-                      RNViewShotModule.RNVIEW_SHOT,
-                      false, // canOverrideExistingModule
-                      false, // needsEagerInit
-                      false, // isCxxModule
-                      true // isTurboModule
-              ));
-      return moduleInfos;
-    };
+  public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
+    return Collections.emptyList();
   }
 }

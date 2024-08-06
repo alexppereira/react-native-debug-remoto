@@ -26,7 +26,6 @@ import android.widget.ScrollView;
 
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.fabric.interop.UIBlockViewResolver;
 import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.uimanager.UIBlock;
 
@@ -58,8 +57,8 @@ import static android.view.View.VISIBLE;
 /**
  * Snapshot utility class allow to screenshot a view.
  */
-public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBlock {
-    //region Constants
+public class ViewShot implements UIBlock {
+    // region Constants
     /**
      * Tag fort Class logs.
      */
@@ -69,7 +68,8 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
      */
     public static final String ERROR_UNABLE_TO_SNAPSHOT = "E_UNABLE_TO_SNAPSHOT";
     /**
-     * pre-allocated output stream size for screenshot. In real life example it will eb around 7Mb.
+     * pre-allocated output stream size for screenshot. In real life example it will
+     * eb around 7Mb.
      */
     private static final int PREALLOCATE_SIZE = 64 * 1024;
     /**
@@ -82,10 +82,10 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     private static final int SURFACE_VIEW_READ_PIXELS_TIMEOUT = 5;
 
     @SuppressWarnings("WeakerAccess")
-    @IntDef({Formats.JPEG, Formats.PNG, Formats.WEBP, Formats.RAW})
+    @IntDef({ Formats.JPEG, Formats.PNG, Formats.WEBP, Formats.RAW })
     public @interface Formats {
         int JPEG = 0; // Bitmap.CompressFormat.JPEG.ordinal();
-        int PNG = 1;  // Bitmap.CompressFormat.PNG.ordinal();
+        int PNG = 1; // Bitmap.CompressFormat.PNG.ordinal();
         int WEBP = 2; // Bitmap.CompressFormat.WEBP.ordinal();
         int RAW = -1;
 
@@ -99,7 +99,7 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     /**
      * Supported Output results.
      */
-    @StringDef({Results.BASE_64, Results.DATA_URI, Results.TEMP_FILE, Results.ZIP_BASE_64})
+    @StringDef({ Results.BASE_64, Results.DATA_URI, Results.TEMP_FILE, Results.ZIP_BASE_64 })
     public @interface Results {
         /**
          * Save screenshot as temp file on device.
@@ -118,16 +118,16 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
          */
         String DATA_URI = "data-uri";
     }
-    //endregion
+    // endregion
 
-    //region Static members
+    // region Static members
     /**
      * Image output buffer used as a source for base64 encoding
      */
     private static byte[] outputBuffer = new byte[PREALLOCATE_SIZE];
-    //endregion
+    // endregion
 
-    //region Class members
+    // region Class members
     private final int tag;
     private final String extension;
     @Formats
@@ -140,14 +140,14 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     private final String result;
     private final Promise promise;
     private final Boolean snapshotContentContainer;
-    @SuppressWarnings({"unused", "FieldCanBeLocal"})
+    @SuppressWarnings({ "unused", "FieldCanBeLocal" })
     private final ReactApplicationContext reactContext;
     private final boolean handleGLSurfaceView;
     private final Activity currentActivity;
     private final Executor executor;
-    //endregion
+    // endregion
 
-    //region Constructors
+    // region Constructors
     @SuppressWarnings("WeakerAccess")
     public ViewShot(
             final int tag,
@@ -179,23 +179,12 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
         this.promise = promise;
         this.executor = executor;
     }
-    //endregion
+    // endregion
 
-    //region Overrides
+    // region Overrides
     @Override
     public void execute(final NativeViewHierarchyManager nativeViewHierarchyManager) {
-        executeImpl(nativeViewHierarchyManager, null);
-    }
-
-    @Override
-    public void execute(@NonNull UIBlockViewResolver uiBlockViewResolver) {
-        executeImpl(null, uiBlockViewResolver);
-    }
-    //endregion
-
-    //region Implementation
-    private void executeImpl(final NativeViewHierarchyManager nativeViewHierarchyManager, final UIBlockViewResolver uiBlockViewResolver) {
-        executor.execute(new Runnable () {
+        executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -203,8 +192,6 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
 
                     if (tag == -1) {
                         view = currentActivity.getWindow().getDecorView().findViewById(android.R.id.content);
-                    } else if (uiBlockViewResolver != null) {
-                        view = uiBlockViewResolver.resolveView(tag);
                     } else {
                         view = nativeViewHierarchyManager.resolveView(tag);
                     }
@@ -235,7 +222,9 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
             }
         });
     }
+    // endregion
 
+    // region Implementation
     private void saveToTempFileOnDevice(@NonNull final View view) throws IOException {
         final FileOutputStream fos = new FileOutputStream(output);
         captureView(view, fos);
@@ -326,7 +315,7 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
         for (int i = 0; i < viewGroup.getChildCount(); i++) {
             View child = viewGroup.getChildAt(i);
 
-            //Do not add any parents, just add child elements
+            // Do not add any parents, just add child elements
             result.addAll(getAllChildren(child));
         }
 
@@ -334,7 +323,8 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     }
 
     /**
-     * Wrap {@link #captureViewImpl(View, OutputStream)} call and on end close output stream.
+     * Wrap {@link #captureViewImpl(View, OutputStream)} call and on end close
+     * output stream.
      */
     private Point captureView(@NonNull final View view, @NonNull final OutputStream os) throws IOException {
         try {
@@ -376,37 +366,42 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
         paint.setDither(true);
 
         // Uncomment next line if you want to wait attached android studio debugger:
-        //   Debug.waitForDebugger();
+        // Debug.waitForDebugger();
 
         final Canvas c = new Canvas(bitmap);
         view.draw(c);
 
-        //after view is drawn, go through children
+        // after view is drawn, go through children
         final List<View> childrenList = getAllChildren(view);
 
         for (final View child : childrenList) {
             // skip any child that we don't know how to process
             if (child instanceof TextureView) {
                 // skip all invisible to user child views
-                if (child.getVisibility() != VISIBLE) continue;
+                if (child.getVisibility() != VISIBLE)
+                    continue;
 
                 final TextureView tvChild = (TextureView) child;
                 tvChild.setOpaque(false); // <-- switch off background fill
 
-                // NOTE (olku): get re-usable bitmap. TextureView should use bitmaps with matching size,
-                // otherwise content of the TextureView will be scaled to provided bitmap dimensions
-                final Bitmap childBitmapBuffer = tvChild.getBitmap(getExactBitmapForScreenshot(child.getWidth(), child.getHeight()));
+                // NOTE (olku): get re-usable bitmap. TextureView should use bitmaps with
+                // matching size,
+                // otherwise content of the TextureView will be scaled to provided bitmap
+                // dimensions
+                final Bitmap childBitmapBuffer = tvChild
+                        .getBitmap(getExactBitmapForScreenshot(child.getWidth(), child.getHeight()));
 
                 final int countCanvasSave = c.save();
                 applyTransformations(c, view, child);
 
-                // due to re-use of bitmaps for screenshot, we can get bitmap that is bigger in size than requested
+                // due to re-use of bitmaps for screenshot, we can get bitmap that is bigger in
+                // size than requested
                 c.drawBitmap(childBitmapBuffer, 0, 0, paint);
 
                 c.restoreToCount(countCanvasSave);
                 recycleBitmap(childBitmapBuffer);
             } else if (child instanceof SurfaceView && handleGLSurfaceView) {
-                final SurfaceView svChild = (SurfaceView)child;
+                final SurfaceView svChild = (SurfaceView) child;
                 final CountDownLatch latch = new CountDownLatch(1);
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -503,9 +498,9 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     private static <T extends A, A> T cast(final A instance) {
         return (T) instance;
     }
-    //endregion
+    // endregion
 
-    //region Cache re-usable bitmaps
+    // region Cache re-usable bitmaps
     /**
      * Synchronization guard.
      */
@@ -535,7 +530,8 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     }
 
     /**
-     * Try to find a bitmap for screenshot in reusable set and if not found create a new one.
+     * Try to find a bitmap for screenshot in reusable set and if not found create a
+     * new one.
      */
     @NonNull
     private static Bitmap getBitmapForScreenshot(final int width, final int height) {
@@ -553,7 +549,8 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
     }
 
     /**
-     * Try to find a bitmap with exact width and height for screenshot in reusable set and if
+     * Try to find a bitmap with exact width and height for screenshot in reusable
+     * set and if
      * not found create a new one.
      */
     @NonNull
@@ -570,9 +567,9 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
 
         return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
     }
-    //endregion
+    // endregion
 
-    //region Nested declarations
+    // region Nested declarations
 
     /**
      * Stream that can re-use pre-allocated buffer.
@@ -628,12 +625,10 @@ public class ViewShot implements UIBlock, com.facebook.react.fabric.interop.UIBl
             if (minCapacity < 0) // overflow
                 throw new OutOfMemoryError();
 
-            return (minCapacity > MAX_ARRAY_SIZE) ?
-                    Integer.MAX_VALUE :
-                    MAX_ARRAY_SIZE;
+            return (minCapacity > MAX_ARRAY_SIZE) ? Integer.MAX_VALUE : MAX_ARRAY_SIZE;
         }
 
     }
-    //endregion
+    // endregion
 
 }
