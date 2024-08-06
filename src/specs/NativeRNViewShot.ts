@@ -9,6 +9,7 @@ export interface Spec extends TurboModule {
   simulateClick: (x: number, y: number) => Promise<boolean>;
   insertText: (text: string) => Promise<boolean>;
   takeScreenshot: () => Promise<string>;
+  restartApp: () => Promise<void>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('RNViewShot');

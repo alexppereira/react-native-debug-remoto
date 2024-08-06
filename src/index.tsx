@@ -210,7 +210,7 @@ async function enviarImagemParaRemoto(servidor: string): Promise<void> {
       },
     });
   } catch (error) {
-    console.error('Erro ao enviar imagem:', error);
+    // console.error('Erro ao enviar imagem:', error);
   }
 
   await RNViewShot.deleteImage(localUri.replace('file://', ''));
@@ -226,14 +226,15 @@ export function onRefParaCaptura(ref: View | null): View | null {
 
 export async function sendLogToServer(
   level: string,
-  args: string[]
+  args: string[],
+  urlDebug: string
 ): Promise<void> {
   try {
-    await fetch('http://192.168.1.9:3000/logs', {
-      // Use o IP correto se necessário
+    await fetch(`${urlDebug}/logs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Basic YWxleDpjb3JhY2Fvb3V0b25v',
       },
       body: JSON.stringify({
         level,
@@ -242,7 +243,7 @@ export async function sendLogToServer(
       }),
     });
   } catch (error) {
-    console.error('Failed to send log to server', error);
+    // console.error('Failed to send log to server', error);
   }
 }
 
@@ -256,22 +257,22 @@ export function inicializarDebugControleRemoto(
   const originalConsoleError = console.error;
 
   console.log = (...args) => {
-    sendLogToServer('log', args);
+    sendLogToServer('log', args, urlDebug);
     originalConsoleLog(...args);
   };
 
   console.info = (...args) => {
-    sendLogToServer('info', args);
+    sendLogToServer('info', args, urlDebug);
     originalConsoleInfo(...args);
   };
 
   console.warn = (...args) => {
-    sendLogToServer('warn', args);
+    sendLogToServer('warn', args, urlDebug);
     originalConsoleWarn(...args);
   };
 
   console.error = (...args) => {
-    sendLogToServer('error', args);
+    sendLogToServer('error', args, urlDebug);
     originalConsoleError(...args);
   };
 
@@ -290,6 +291,15 @@ export function inicializarDebugControleRemoto(
     console.log(`Clique na imagem: X = ${xPorcentagem}%, Y = ${yPorcentagem}%`);
 
     simularClickPassandoPorcentagem(xPorcentagem, yPorcentagem);
+  });
+
+  socket.on('retart-app', () => {
+    console.info('Reiniciando o app...');
+    socket.close();
+    onRefParaCaptura(null);
+    setTimeout(() => {
+      RNViewShot.restartApp();
+    }, 300);
   });
 
   socket.on('texto', (data) => {

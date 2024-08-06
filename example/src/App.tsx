@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, Modal } from 'react-native';
+import {
+  View,
+  TextInput,
+  Button,
+  Text,
+  StyleSheet,
+  // Modal
+} from 'react-native';
 import {
   inicializarDebugControleRemoto,
-  onRefParaCaptura,
+  // onRefParaCaptura,
 } from 'react-native-debug-remoto';
 
 const TextInputExample = () => {
@@ -21,27 +28,27 @@ const TextInputExample = () => {
   };
 
   const handleButtonPress = () => {
-    console.log('Valor de entrada de texto: ', text.test.teste);
+    console.log('Valor de entrada de texto: ', text);
     setText('');
   };
 
   return (
-    <Modal visible={true} transparent animationType="slide">
-      <View
-        ref={onRefParaCaptura}
-        style={styles.container}
-        accessibilityLabel="modal-view"
-      >
-        <TextInput
-          style={styles.input}
-          placeholder="Digite algo remoto, acesse http://alexpereira.net.br:3000"
-          value={text}
-          onChangeText={handleTextChange}
-        />
-        <Button title="ENVIAR" onPress={handleButtonPress} />
-        <Text style={styles.text}>Texto inserido: {text}</Text>
-      </View>
-    </Modal>
+    // <Modal visible={true} transparent animationType="slide">
+    <View
+      // ref={onRefParaCaptura}
+      style={styles.container}
+      accessibilityLabel="modal-view"
+    >
+      <TextInput
+        style={styles.input}
+        placeholder="Digite algo remoto, acesse http://alexpereira.net.br:3000"
+        value={text}
+        onChangeText={handleTextChange}
+      />
+      <Button title="ENVIAR" onPress={handleButtonPress} />
+      <Text style={styles.text}>Texto inserido: {text}</Text>
+    </View>
+    // </Modal>
   );
 };
 

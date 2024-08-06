@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.os.Build;
 import android.view.WindowManager;
+import android.content.Intent;
 
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Promise;
@@ -166,6 +167,33 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
             promise.resolve("file://" + file.getAbsolutePath());
         } catch (IOException e) {
             promise.reject("Error", "Failed to take screenshot", e);
+        }
+    }
+
+    @ReactMethod
+    public void restartApp(Promise promise) {
+        Activity activity = getCurrentActivity();
+        if (activity != null) {
+            try {
+                // Cria uma intenção para reiniciar o aplicativo
+                Intent intent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
+                if (intent != null) {
+                    // Limpa a pilha de atividades e reinicia o aplicativo
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    activity.startActivity(intent);
+                    // Opcionalmente, finalize a atividade atual para garantir que o aplicativo
+                    // reinicie
+                    activity.finish();
+                    promise.resolve("App restarted successfully");
+                } else {
+                    promise.reject("Error", "Unable to find launch intent for package");
+                }
+            } catch (Exception e) {
+                promise.reject("Error", "Failed to restart app", e);
+            }
+        } else {
+            promise.reject("Error", "No current activity available");
         }
     }
 
