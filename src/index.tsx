@@ -246,6 +246,8 @@ export async function sendLogToServer(
   urlDebug: string
 ): Promise<void> {
   try {
+    const argsString = JSON.stringify(args);
+
     await fetch(`${urlDebug}/logs`, {
       method: 'POST',
       headers: {
@@ -254,7 +256,7 @@ export async function sendLogToServer(
       },
       body: JSON.stringify({
         level,
-        message: args.join(' '),
+        message: argsString,
         timestamp: new Date().toISOString(),
       }),
     });
