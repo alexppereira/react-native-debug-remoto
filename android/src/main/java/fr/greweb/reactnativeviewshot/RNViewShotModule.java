@@ -9,6 +9,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.os.Build;
 import android.view.WindowManager;
@@ -159,9 +160,9 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
 
             // Usar a pasta de cache interna do aplicativo
             File cacheDir = activity.getCacheDir();
-            File file = new File(cacheDir, "screenshot_" + System.currentTimeMillis() + ".png");
+            File file = new File(cacheDir, "screenshot_" + System.currentTimeMillis() + ".jpg");
             try (FileOutputStream outputStream = new FileOutputStream(file)) {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 10, outputStream);
             }
 
             promise.resolve("file://" + file.getAbsolutePath());
@@ -338,5 +339,34 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
             return File.createTempFile(fileName, suffix, cacheDir);
         }
         return File.createTempFile(TEMP_FILE_PREFIX, suffix, cacheDir);
+    }
+
+    @ReactMethod
+    public void generateImageHash(String localUri, Promise promise) {
+        try {
+            // Carrega o bitmap da URI fornecida
+            Bitmap bitmap = BitmapFactory.decodeFile(localUri.replace("file://", ""));
+
+            if (bitmap == null) {
+                promise.reject("Error", "Falha ao carregar a imagem.");
+                return;
+            }
+
+            // Gera um hash simples com base nos pixels da imagem
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            long hash = 0;
+
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    int pixel = bitmap.getPixel(x, y);
+                    hash = (31 * hash) + pixel;
+                }
+            }
+
+            promise.resolve(String.valueOf(hash));
+        } catch (Exception e) {
+            promise.reject("Error", "Falha ao gerar o hash da imagem.", e);
+        }
     }
 }

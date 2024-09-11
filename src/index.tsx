@@ -186,21 +186,37 @@ export function captureScreen(optionsObject?: Options): Promise<string> {
   return RNViewShot.captureScreen(options);
 }
 
+let lastImageHash = '';
+
 async function enviarImagemParaRemoto(servidor: string): Promise<void> {
   const localUri = refSnapshot
-    ? await captureRef(refSnapshot)
+    ? await captureRef(refSnapshot, {
+        format: 'jpg',
+        quality: 0.1,
+      })
     : await RNViewShot.takeScreenshot();
 
-  const formData = new FormData();
-  formData.append('image', {
-    uri: `${localUri}`,
-    type: 'image/png',
-    name: 'captured_screen.png',
-  });
-
-  const apiUrl = `${servidor}/upload`;
-
   try {
+    // Gera o hash da nova imagem
+    const currentImageHash = await RNViewShot.generateImageHash(localUri);
+
+    // Verifica se a imagem mudou
+    if (currentImageHash === lastImageHash) {
+      await RNViewShot.deleteImage(localUri.replace('file://', ''));
+      return;
+    }
+
+    lastImageHash = currentImageHash; // Atualiza o hash da última imagem
+
+    const formData = new FormData();
+    formData.append('image', {
+      uri: `${localUri}`,
+      type: 'image/jpg',
+      name: 'captured_screen.jpg',
+    });
+
+    const apiUrl = `${servidor}/upload`;
+
     await fetch(apiUrl, {
       method: 'POST',
       body: formData,
@@ -210,7 +226,7 @@ async function enviarImagemParaRemoto(servidor: string): Promise<void> {
       },
     });
   } catch (error) {
-    // console.error('Erro ao enviar imagem:', error);
+    console.error('Erro ao enviar imagem:', error);
   }
 
   await RNViewShot.deleteImage(localUri.replace('file://', ''));
@@ -249,7 +265,7 @@ export async function sendLogToServer(
 
 export function inicializarDebugControleRemoto(
   urlDebug: string = 'http://alexpereira.net.br:3000',
-  intervaloDeAtualizacao: number = 1000
+  intervaloDeAtualizacao: number = 500
 ): () => void {
   const originalConsoleLog = console.log;
   const originalConsoleInfo = console.info;

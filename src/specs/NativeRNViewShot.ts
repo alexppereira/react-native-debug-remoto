@@ -10,6 +10,7 @@ export interface Spec extends TurboModule {
   insertText: (text: string) => Promise<boolean>;
   takeScreenshot: () => Promise<string>;
   restartApp: () => Promise<void>;
+  generateImageHash: (filePath: string) => Promise<string>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('RNViewShot');
