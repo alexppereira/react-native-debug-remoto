@@ -7,5 +7,5 @@ PROJECT_ROOT=${INIT_CWD}
 echo "Diretório do projeto pai: $PROJECT_ROOT"
 
 # Aplica os patches no react-native do projeto pai
-patch --forward -i "$PROJECT_ROOT/patches/react-native+0.73.6-log-box-inspector.patch" "$PROJECT_ROOT/node_modules/react-native/Libraries/LogBox/UI/LogBoxInspector.js"
-patch --forward -i "$PROJECT_ROOT/patches/react-native+0.73.6-modal.patch" "$PROJECT_ROOT/node_modules/react-native/Libraries/Modal/Modal.js"
+patch --forward -i "./patches/react-native+0.73.6-log-box-inspector.patch" "$PROJECT_ROOT/node_modules/react-native/Libraries/LogBox/UI/LogBoxInspector.js"
+patch --forward -i "./patches/react-native+0.73.6-modal.patch" "$PROJECT_ROOT/node_modules/react-native/Libraries/Modal/Modal.js"
