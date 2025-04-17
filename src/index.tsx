@@ -7,9 +7,58 @@ import {
   Platform,
   StyleSheet,
   View,
+  NativeModules,
+  PermissionsAndroid,
 } from 'react-native';
 import io from 'socket.io-client';
+import axios from 'axios';
+import RNFS from 'react-native-fs';
+import DeviceInfo from 'react-native-device-info';
 import RNViewShot from './specs/NativeRNViewShot';
+
+// Configuração do interceptor do Axios
+axios.interceptors.request.use(
+  (config) => {
+    console.info('🚀 Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      headers: config.headers,
+      data: config.data,
+      params: config.params,
+    });
+    return config;
+  },
+  (error) => {
+    console.info('❌ Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+axios.interceptors.response.use(
+  (response) => {
+    console.info('✅ Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.config.url,
+      data: response.data,
+    });
+    return response;
+  },
+  (error) => {
+    console.info('❌ Response Error:', {
+      message: error.message,
+      response: error.response
+        ? {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data,
+          }
+        : 'No response',
+      url: error.config?.url,
+    });
+    return Promise.reject(error);
+  }
+);
 
 export function ensureModuleIsLoaded() {
   if (!RNViewShot) {
@@ -265,7 +314,131 @@ export async function sendLogToServer(
   }
 }
 
+async function atualizarBundle(urlServidor: string): Promise<void> {
+  try {
+    console.info('Iniciando download do novo bundle...');
+
+    // Caminho do bundle no Android usando CachesDirectoryPath
+    const bundlePath = `${RNFS.CachesDirectoryPath}/index.android.bundle`;
+    const tempBundlePath = `${bundlePath}.temp`;
+
+    // URL do servidor para download do bundle
+    const bundleUrl = `${urlServidor}/bundle/download`;
+
+    console.info('Baixando bundle de:', bundleUrl);
+    console.info('Salvando em:', bundlePath);
+
+    // Download do arquivo com autenticação básica
+    const response = await fetch(bundleUrl, {
+      headers: {
+        Authorization: 'Basic YWxleDpjb3JhY2Fvb3V0b25v', // alex:coracaooutono em Base64
+      },
+    });
+    console.info('Finalizou download');
+
+    if (!response.ok) {
+      throw new Error(
+        `Erro ao baixar bundle: ${response.status} ${response.statusText}`
+      );
+    }
+
+    // Criar diretório de cache se não existir
+    const bundleDir = RNFS.CachesDirectoryPath;
+    const dirExists = await RNFS.exists(bundleDir);
+    console.info('Inicio verificando/criando diretorio:', bundleDir);
+    if (!dirExists) {
+      await RNFS.mkdir(bundleDir);
+    }
+
+    // Salvar o bundle em chunks
+    console.info('Inicio salvando arquivo temporario:', tempBundlePath);
+    try {
+      const blob = await response.blob();
+      const fileReader = new FileReader();
+
+      // Criar uma Promise para aguardar a leitura do arquivo
+      const readFileAsText = () =>
+        new Promise<string>((resolve, reject) => {
+          fileReader.onload = () => resolve(fileReader.result as string);
+          fileReader.onerror = reject;
+          fileReader.readAsText(blob);
+        });
+
+      console.info('Iniciando leitura do blob');
+      const content = await readFileAsText();
+      console.info('Finalizou leitura do blob, tamanho:', content.length);
+
+      // Salvar em chunks de 1MB
+      const chunkSize = 1024 * 1024; // 1MB
+      const totalChunks = Math.ceil(content.length / chunkSize);
+
+      console.info(
+        'Iniciando escrita em chunks, total de chunks:',
+        totalChunks
+      );
+
+      // Criar arquivo vazio
+      await RNFS.writeFile(tempBundlePath, '', 'utf8');
+
+      // Escrever chunks
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min((i + 1) * chunkSize, content.length);
+        const chunk = content.slice(start, end);
+
+        console.info(`Escrevendo chunk ${i + 1}/${totalChunks}`);
+        await RNFS.appendFile(tempBundlePath, chunk, 'utf8');
+      }
+
+      console.info('Finalizou salvando arquivo temporario');
+    } catch (writeError) {
+      console.error('Erro ao escrever arquivo temporário:', writeError);
+      throw writeError;
+    }
+
+    // Verificar se o arquivo foi salvo corretamente
+    console.info('Inicio verificando se o arquivo foi salvo corretamente');
+    const exists = await RNFS.exists(tempBundlePath);
+    if (!exists) {
+      throw new Error('Falha ao salvar o arquivo temporário');
+    }
+    console.info('Finalizou verificando se o arquivo foi salvo corretamente');
+
+    // Substituir o bundle antigo pelo novo
+    console.info('Inicio movendo arquivo temporário para destino final');
+    try {
+      await RNFS.moveFile(tempBundlePath, bundlePath);
+      console.info('Bundle movido com sucesso para:', bundlePath);
+    } catch (moveError) {
+      console.error('Erro ao mover arquivo:', moveError);
+      throw moveError;
+    }
+
+    console.info('Bundle atualizado com sucesso!');
+    const socket = io(urlServidor);
+
+    // Reiniciar o app após 2 segundos
+    setTimeout(() => {
+      console.info('Reiniciando o app...');
+      socket.close();
+      onRefParaCaptura(null);
+      setTimeout(() => {
+        RNViewShot.restartApp();
+      }, 300);
+    }, 2000);
+  } catch (error: any) {
+    // Melhor tratamento do erro
+    console.error('Erro ao atualizar bundle:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      details: error,
+    });
+  }
+}
+
 export function inicializarDebugControleRemoto(
+  axiosInstances: any[] = [],
   urlDebug: string = 'http://alexpereira.net.br:3000',
   intervaloDeAtualizacao: number = 500
 ): () => void {
@@ -273,6 +446,96 @@ export function inicializarDebugControleRemoto(
   const originalConsoleInfo = console.info;
   const originalConsoleWarn = console.warn;
   const originalConsoleError = console.error;
+
+  // Configurar interceptors para a instância global do axios
+  axios.interceptors.request.use(
+    (config) => {
+      console.info('🚀 Request:', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        headers: config.headers,
+        data: config.data,
+        params: config.params,
+      });
+      return config;
+    },
+    (error) => {
+      console.info('❌ Request Error:', error);
+      return Promise.reject(error);
+    }
+  );
+
+  axios.interceptors.response.use(
+    (response) => {
+      console.info('✅ Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.config.url,
+        data: response.data,
+      });
+      return response;
+    },
+    (error) => {
+      console.info('❌ Response Error:', {
+        message: error.message,
+        response: error.response
+          ? {
+              status: error.response.status,
+              statusText: error.response.statusText,
+              data: error.response.data,
+            }
+          : 'No response',
+        url: error.config?.url,
+      });
+      return Promise.reject(error);
+    }
+  );
+
+  // Configurar interceptors para cada instância personalizada
+  axiosInstances.forEach((instance) => {
+    instance.interceptors.request.use(
+      (config) => {
+        console.info('🚀 Request:', {
+          method: config.method?.toUpperCase(),
+          url: config.url,
+          headers: config.headers,
+          data: config.data,
+          params: config.params,
+        });
+        return config;
+      },
+      (error) => {
+        console.info('❌ Request Error:', error);
+        return Promise.reject(error);
+      }
+    );
+
+    instance.interceptors.response.use(
+      (response) => {
+        console.info('✅ Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.config.url,
+          data: response.data,
+        });
+        return response;
+      },
+      (error) => {
+        console.info('❌ Response Error:', {
+          message: error.message,
+          response: error.response
+            ? {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data,
+              }
+            : 'No response',
+          url: error.config?.url,
+        });
+        return Promise.reject(error);
+      }
+    );
+  });
 
   console.log = (...args) => {
     sendLogToServer('log', args, urlDebug);
@@ -325,6 +588,11 @@ export function inicializarDebugControleRemoto(
     console.log(`Digitando texto: ${texto}`);
 
     simularDigitarTexto(texto);
+  });
+
+  socket.on('atualizar-bundle', () => {
+    console.info('Recebido comando para atualizar bundle');
+    atualizarBundle(urlDebug);
   });
 
   const timer = setInterval(() => {

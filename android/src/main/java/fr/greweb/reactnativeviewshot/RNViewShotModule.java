@@ -154,6 +154,17 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
             WindowManager windowManager = (WindowManager) activity.getSystemService(ReactContext.WINDOW_SERVICE);
             View view = activity.getWindow().getDecorView().getRootView();
 
+            if (view == null || view.getWidth() == 0 || view.getHeight() == 0) {
+                promise.reject("Error", "View is not ready or visible");
+                return;
+            }
+
+            // Verifica se a view está attached à window
+            if (!view.isAttachedToWindow()) {
+                promise.reject("Error", "View is not attached to window");
+                return;
+            }
+
             Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             view.draw(canvas);
@@ -344,29 +355,62 @@ public class RNViewShotModule extends ReactContextBaseJavaModule implements Turb
     @ReactMethod
     public void generateImageHash(String localUri, Promise promise) {
         try {
-            // Carrega o bitmap da URI fornecida
-            Bitmap bitmap = BitmapFactory.decodeFile(localUri.replace("file://", ""));
+            String filePath = localUri.replace("file://", "");
 
-            if (bitmap == null) {
-                promise.reject("Error", "Falha ao carregar a imagem.");
+            File file = new File(filePath);
+            if (!file.exists()) {
+                promise.reject("Error", "Arquivo não encontrado: " + filePath);
                 return;
             }
 
-            // Gera um hash simples com base nos pixels da imagem
-            int width = bitmap.getWidth();
-            int height = bitmap.getHeight();
-            long hash = 0;
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = 4; // Reduz o tamanho da imagem em 4x
+            options.inPreferredConfig = Bitmap.Config.RGB_565; // Usa menos memória que ARGB_8888
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    int pixel = bitmap.getPixel(x, y);
-                    hash = (31 * hash) + pixel;
-                }
+            Bitmap bitmap = BitmapFactory.decodeFile(filePath, options);
+
+            if (bitmap == null) {
+                promise.reject("Error", "Falha ao carregar a imagem: " + filePath);
+                return;
             }
 
-            promise.resolve(String.valueOf(hash));
+            try {
+                int width = bitmap.getWidth();
+                int height = bitmap.getHeight();
+
+                int sampleStepX = Math.max(1, width / 100);
+                int sampleStepY = Math.max(1, height / 100);
+
+                long hash = 1125899906842597L;
+
+                for (int x = 0; x < width; x += sampleStepX) {
+                    for (int y = 0; y < height; y += sampleStepY) {
+                        try {
+                            int pixel = bitmap.getPixel(x, y);
+                            int r = (pixel >> 16) & 0xFF;
+                            int g = (pixel >> 8) & 0xFF;
+                            int b = pixel & 0xFF;
+                            hash = (hash * 31 + r) ^ (hash * 31 + g) ^ (hash * 31 + b);
+                        } catch (IllegalArgumentException e) {
+                            Log.e("RNViewShot", "Erro ao acessar pixel: " + e.getMessage());
+                            continue;
+                        }
+                    }
+                }
+
+                String hashString = String.format("%016x", Math.abs(hash));
+                promise.resolve(hashString);
+
+            } finally {
+                bitmap.recycle();
+            }
+
+        } catch (OutOfMemoryError e) {
+            Log.e("RNViewShot", "Erro de memória ao gerar hash: " + e.getMessage());
+            promise.reject("Error", "Memória insuficiente para processar a imagem");
         } catch (Exception e) {
-            promise.reject("Error", "Falha ao gerar o hash da imagem.", e);
+            Log.e("RNViewShot", "Erro ao gerar hash: " + e.getMessage());
+            promise.reject("Error", "Falha ao gerar o hash da imagem: " + e.getMessage());
         }
     }
 }

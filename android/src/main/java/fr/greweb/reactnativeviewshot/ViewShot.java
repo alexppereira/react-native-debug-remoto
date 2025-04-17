@@ -202,6 +202,19 @@ public class ViewShot implements UIBlock {
                         return;
                     }
 
+                    if (view.getWindowToken() == null) {
+                        Log.e(TAG, "View is not attached to window", new AssertionError());
+                        promise.reject(ERROR_UNABLE_TO_SNAPSHOT, "View is not attached to window");
+                        return;
+                    }
+
+                    if (!view.isShown() || view.getWidth() <= 0 || view.getHeight() <= 0) {
+                        Log.e(TAG, "View is not valid (not shown or has invalid dimensions)", new AssertionError());
+                        promise.reject(ERROR_UNABLE_TO_SNAPSHOT,
+                                "View is not valid (not shown or has invalid dimensions)");
+                        return;
+                    }
+
                     final ReusableByteArrayOutputStream stream = new ReusableByteArrayOutputStream(outputBuffer);
                     stream.setSize(proposeSize(view));
                     outputBuffer = stream.innerBuffer();
@@ -217,7 +230,7 @@ public class ViewShot implements UIBlock {
                     }
                 } catch (final Throwable ex) {
                     Log.e(TAG, "Failed to capture view snapshot", ex);
-                    promise.reject(ERROR_UNABLE_TO_SNAPSHOT, "Failed to capture view snapshot");
+                    promise.reject(ERROR_UNABLE_TO_SNAPSHOT, "Failed to capture view snapshot: " + ex.getMessage());
                 }
             }
         });
@@ -341,118 +354,117 @@ public class ViewShot implements UIBlock {
      * @return screenshot resolution, Width * Height
      */
     private Point captureViewImpl(@NonNull final View view, @NonNull final OutputStream os) {
-        int w = view.getWidth();
-        int h = view.getHeight();
+        try {
+            int w = view.getWidth();
+            int h = view.getHeight();
 
-        if (w <= 0 || h <= 0) {
-            throw new RuntimeException("Impossible to snapshot the view: view is invalid");
-        }
-
-        // evaluate real height
-        if (snapshotContentContainer) {
-            h = 0;
-            ScrollView scrollView = (ScrollView) view;
-            for (int i = 0; i < scrollView.getChildCount(); i++) {
-                h += scrollView.getChildAt(i).getHeight();
+            if (w <= 0 || h <= 0) {
+                throw new RuntimeException("Impossible to snapshot the view: view is invalid");
             }
-        }
 
-        final Point resolution = new Point(w, h);
-        Bitmap bitmap = getBitmapForScreenshot(w, h);
-
-        final Paint paint = new Paint();
-        paint.setAntiAlias(true);
-        paint.setFilterBitmap(true);
-        paint.setDither(true);
-
-        // Uncomment next line if you want to wait attached android studio debugger:
-        // Debug.waitForDebugger();
-
-        final Canvas c = new Canvas(bitmap);
-        view.draw(c);
-
-        // after view is drawn, go through children
-        final List<View> childrenList = getAllChildren(view);
-
-        for (final View child : childrenList) {
-            // skip any child that we don't know how to process
-            if (child instanceof TextureView) {
-                // skip all invisible to user child views
-                if (child.getVisibility() != VISIBLE)
-                    continue;
-
-                final TextureView tvChild = (TextureView) child;
-                tvChild.setOpaque(false); // <-- switch off background fill
-
-                // NOTE (olku): get re-usable bitmap. TextureView should use bitmaps with
-                // matching size,
-                // otherwise content of the TextureView will be scaled to provided bitmap
-                // dimensions
-                final Bitmap childBitmapBuffer = tvChild
-                        .getBitmap(getExactBitmapForScreenshot(child.getWidth(), child.getHeight()));
-
-                final int countCanvasSave = c.save();
-                applyTransformations(c, view, child);
-
-                // due to re-use of bitmaps for screenshot, we can get bitmap that is bigger in
-                // size than requested
-                c.drawBitmap(childBitmapBuffer, 0, 0, paint);
-
-                c.restoreToCount(countCanvasSave);
-                recycleBitmap(childBitmapBuffer);
-            } else if (child instanceof SurfaceView && handleGLSurfaceView) {
-                final SurfaceView svChild = (SurfaceView) child;
-                final CountDownLatch latch = new CountDownLatch(1);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    final Bitmap childBitmapBuffer = getExactBitmapForScreenshot(child.getWidth(), child.getHeight());
-                    try {
-                        PixelCopy.request(svChild, childBitmapBuffer, new PixelCopy.OnPixelCopyFinishedListener() {
-                            @Override
-                            public void onPixelCopyFinished(int copyResult) {
-                                final int countCanvasSave = c.save();
-                                applyTransformations(c, view, child);
-                                c.drawBitmap(childBitmapBuffer, 0, 0, paint);
-                                c.restoreToCount(countCanvasSave);
-                                recycleBitmap(childBitmapBuffer);
-                                latch.countDown();
-                            }
-                        }, new Handler(Looper.getMainLooper()));
-                        latch.await(SURFACE_VIEW_READ_PIXELS_TIMEOUT, TimeUnit.SECONDS);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Cannot PixelCopy for " + svChild, e);
-                    }
-                } else {
-                    Bitmap cache = svChild.getDrawingCache();
-                    if (cache != null) {
-                        c.drawBitmap(svChild.getDrawingCache(), 0, 0, paint);
-                    }
+            // evaluate real height
+            if (snapshotContentContainer) {
+                h = 0;
+                ScrollView scrollView = (ScrollView) view;
+                for (int i = 0; i < scrollView.getChildCount(); i++) {
+                    h += scrollView.getChildAt(i).getHeight();
                 }
             }
-        }
 
-        if (width != null && height != null && (width != w || height != h)) {
-            final Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+            final Point resolution = new Point(w, h);
+            Bitmap bitmap = getBitmapForScreenshot(w, h);
+
+            final Paint paint = new Paint();
+            paint.setAntiAlias(true);
+            paint.setFilterBitmap(true);
+            paint.setDither(true);
+
+            final Canvas c = new Canvas(bitmap);
+            view.draw(c);
+
+            // after view is drawn, go through children
+            final List<View> childrenList = getAllChildren(view);
+
+            for (final View child : childrenList) {
+                try {
+                    if (child == null || child.getVisibility() != VISIBLE) {
+                        continue;
+                    }
+
+                    // skip any child that we don't know how to process
+                    if (child instanceof TextureView) {
+                        final TextureView tvChild = (TextureView) child;
+                        tvChild.setOpaque(false); // <-- switch off background fill
+
+                        final Bitmap childBitmapBuffer = tvChild
+                                .getBitmap(getExactBitmapForScreenshot(child.getWidth(), child.getHeight()));
+
+                        final int countCanvasSave = c.save();
+                        applyTransformations(c, view, child);
+
+                        c.drawBitmap(childBitmapBuffer, 0, 0, paint);
+
+                        c.restoreToCount(countCanvasSave);
+                        recycleBitmap(childBitmapBuffer);
+                    } else if (child instanceof SurfaceView) {
+                        final SurfaceView svChild = (SurfaceView) child;
+                        final CountDownLatch latch = new CountDownLatch(1);
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            final Bitmap childBitmapBuffer = getExactBitmapForScreenshot(child.getWidth(),
+                                    child.getHeight());
+                            try {
+                                PixelCopy.request(svChild, childBitmapBuffer,
+                                        new PixelCopy.OnPixelCopyFinishedListener() {
+                                            @Override
+                                            public void onPixelCopyFinished(int copyResult) {
+                                                final int countCanvasSave = c.save();
+                                                applyTransformations(c, view, child);
+                                                c.drawBitmap(childBitmapBuffer, 0, 0, paint);
+                                                c.restoreToCount(countCanvasSave);
+                                                recycleBitmap(childBitmapBuffer);
+                                                latch.countDown();
+                                            }
+                                        }, new Handler(Looper.getMainLooper()));
+                                latch.await(SURFACE_VIEW_READ_PIXELS_TIMEOUT, TimeUnit.SECONDS);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Cannot PixelCopy for " + svChild, e);
+                            }
+                        } else {
+                            Bitmap cache = svChild.getDrawingCache();
+                            if (cache != null) {
+                                c.drawBitmap(svChild.getDrawingCache(), 0, 0, paint);
+                            }
+                        }
+                    }
+                } catch (NullPointerException e) {
+                    Log.e(TAG, "NullPointerException while processing child view", e);
+                    continue;
+                }
+            }
+
+            if (width != null && height != null && (width != w || height != h)) {
+                final Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+                recycleBitmap(bitmap);
+                bitmap = scaledBitmap;
+            }
+
+            if (Formats.RAW == this.format && os instanceof ReusableByteArrayOutputStream) {
+                final int total = w * h * ARGB_SIZE;
+                final ReusableByteArrayOutputStream rbaos = cast(os);
+                bitmap.copyPixelsToBuffer(rbaos.asBuffer(total));
+                rbaos.setSize(total);
+            } else {
+                final Bitmap.CompressFormat cf = Formats.mapping[this.format];
+                bitmap.compress(cf, (int) (100.0 * quality), os);
+            }
+
             recycleBitmap(bitmap);
-
-            bitmap = scaledBitmap;
+            return resolution;
+        } catch (NullPointerException e) {
+            Log.e(TAG, "NullPointerException in captureViewImpl", e);
+            throw new RuntimeException("Failed to capture view: " + e.getMessage());
         }
-
-        // special case, just save RAW ARGB array without any compression
-        if (Formats.RAW == this.format && os instanceof ReusableByteArrayOutputStream) {
-            final int total = w * h * ARGB_SIZE;
-            final ReusableByteArrayOutputStream rbaos = cast(os);
-            bitmap.copyPixelsToBuffer(rbaos.asBuffer(total));
-            rbaos.setSize(total);
-        } else {
-            final Bitmap.CompressFormat cf = Formats.mapping[this.format];
-
-            bitmap.compress(cf, (int) (100.0 * quality), os);
-        }
-
-        recycleBitmap(bitmap);
-
-        return resolution; // return image width and height
     }
 
     /**
