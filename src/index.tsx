@@ -7,18 +7,15 @@ import {
   Platform,
   StyleSheet,
   View,
-  NativeModules,
-  PermissionsAndroid,
 } from 'react-native';
 import io from 'socket.io-client';
 import axios from 'axios';
 import RNFS from 'react-native-fs';
-import DeviceInfo from 'react-native-device-info';
 import RNViewShot from './specs/NativeRNViewShot';
 
 // Configuração do interceptor do Axios
 axios.interceptors.request.use(
-  (config) => {
+  (config: any) => {
     console.info('🚀 Request:', {
       method: config.method?.toUpperCase(),
       url: config.url,
@@ -28,14 +25,14 @@ axios.interceptors.request.use(
     });
     return config;
   },
-  (error) => {
+  (error: any) => {
     console.info('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
 
 axios.interceptors.response.use(
-  (response) => {
+  (response: any) => {
     console.info('✅ Response:', {
       status: response.status,
       statusText: response.statusText,
@@ -44,7 +41,7 @@ axios.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  (error: any) => {
     console.info('❌ Response Error:', {
       message: error.message,
       response: error.response
@@ -449,7 +446,7 @@ export function inicializarDebugControleRemoto(
 
   // Configurar interceptors para a instância global do axios
   axios.interceptors.request.use(
-    (config) => {
+    (config: any) => {
       console.info('🚀 Request:', {
         method: config.method?.toUpperCase(),
         url: config.url,
@@ -459,14 +456,14 @@ export function inicializarDebugControleRemoto(
       });
       return config;
     },
-    (error) => {
+    (error: any) => {
       console.info('❌ Request Error:', error);
       return Promise.reject(error);
     }
   );
 
   axios.interceptors.response.use(
-    (response) => {
+    (response: any) => {
       console.info('✅ Response:', {
         status: response.status,
         statusText: response.statusText,
@@ -475,7 +472,7 @@ export function inicializarDebugControleRemoto(
       });
       return response;
     },
-    (error) => {
+    (error: any) => {
       console.info('❌ Response Error:', {
         message: error.message,
         response: error.response
@@ -494,7 +491,7 @@ export function inicializarDebugControleRemoto(
   // Configurar interceptors para cada instância personalizada
   axiosInstances.forEach((instance) => {
     instance.interceptors.request.use(
-      (config) => {
+      (config: any) => {
         console.info('🚀 Request:', {
           method: config.method?.toUpperCase(),
           url: config.url,
@@ -504,14 +501,14 @@ export function inicializarDebugControleRemoto(
         });
         return config;
       },
-      (error) => {
+      (error: any) => {
         console.info('❌ Request Error:', error);
         return Promise.reject(error);
       }
     );
 
     instance.interceptors.response.use(
-      (response) => {
+      (response: any) => {
         console.info('✅ Response:', {
           status: response.status,
           statusText: response.statusText,
@@ -520,7 +517,7 @@ export function inicializarDebugControleRemoto(
         });
         return response;
       },
-      (error) => {
+      (error: any) => {
         console.info('❌ Response Error:', {
           message: error.message,
           response: error.response
