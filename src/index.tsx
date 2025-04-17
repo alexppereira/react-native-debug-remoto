@@ -437,7 +437,7 @@ async function atualizarBundle(urlServidor: string): Promise<void> {
 export function inicializarDebugControleRemoto(
   axiosInstances: any[] = [],
   urlDebug: string = 'http://alexpereira.net.br:3000',
-  intervaloDeAtualizacao: number = 500
+  intervaloDeAtualizacao: number = 2000
 ): () => void {
   const originalConsoleLog = console.log;
   const originalConsoleInfo = console.info;
